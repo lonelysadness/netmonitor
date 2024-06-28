@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/chifflier/nfqueue-go/nfqueue"
+  "github.com/lonelysadness/netmonitor/internal/geoip"
 	"github.com/lonelysadness/netmonitor/pkg/utils"
 	"golang.org/x/sys/unix"
 )
@@ -70,8 +71,11 @@ func Callback(payload *nfqueue.Payload) int {
 		payload.SetVerdict(nfqueue.NF_ACCEPT)
 		return 0
 	}
+  
+  srcCountry := geoip.LookupCountry(srcIP)
+  dstCountry := geoip.LookupCountry(dstIP)
 
-	fmt.Printf("Source IP: %s, Destination IP: %s, Protocol: %s, ", srcIP, dstIP, utils.GetProtocolName(protocol))
+	fmt.Printf("Source IP: %s (%s), Destination IP: %s (%s), Protocol: %s, ", srcIP, srcCountry, dstIP, dstCountry, utils.GetProtocolName(protocol))
 
 	headerLength := 0
 	if (packet[0] >> 4) == 4 {
