@@ -1,4 +1,3 @@
-
 package nfqueue
 
 import (
@@ -6,7 +5,7 @@ import (
     "fmt"
     "net"
 
-    "github.com/chifflier/nfqueue-go/nfqueue"
+    "github.com/florianl/go-nfqueue"
     "github.com/lonelysadness/netmonitor/internal/geoip"
     "github.com/lonelysadness/netmonitor/internal/logger"
     "github.com/lonelysadness/netmonitor/internal/proc"
@@ -30,8 +29,8 @@ func handleIPv6(packet []byte) (net.IP, net.IP, uint8) {
     return srcIP, dstIP, protocol
 }
 
-func Callback(payload *nfqueue.Payload) int {
-    packet := payload.Data
+func Callback(pkt Packet) int {
+    packet := *pkt.Base.Payload
     var srcIP, dstIP net.IP
     var protocol uint8
     var srcPort, dstPort uint16
@@ -44,7 +43,7 @@ func Callback(payload *nfqueue.Payload) int {
         srcIP, dstIP, protocol = handleIPv6(packet)
     default:
         logger.Log.Println("Unknown IP version")
-        payload.SetVerdict(nfqueue.NF_ACCEPT)
+        pkt.queue.getNfq().SetVerdict(pkt.pktID, nfqueue.NfAccept)
         return 0
     }
 
@@ -112,7 +111,7 @@ func Callback(payload *nfqueue.Payload) int {
     fmt.Println()
 
     // Set verdict without printing
-    payload.SetVerdict(nfqueue.NF_ACCEPT)
+    pkt.queue.getNfq().SetVerdict(pkt.pktID, nfqueue.NfAccept)
     return 0
 }
 
@@ -129,3 +128,4 @@ func handleICMPv6(packet []byte, headerLength int) (int, int) {
     icmpCode := int(icmpHeader[1])
     return icmpType, icmpCode
 }
+
