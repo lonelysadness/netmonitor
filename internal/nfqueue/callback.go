@@ -1,3 +1,4 @@
+
 package nfqueue
 
 import (
@@ -7,7 +8,8 @@ import (
 
     "github.com/chifflier/nfqueue-go/nfqueue"
     "github.com/lonelysadness/netmonitor/internal/geoip"
-    "github.com.lonelysadness/netmonitor/internal/proc"
+    "github.com/lonelysadness/netmonitor/internal/logger"
+    "github.com/lonelysadness/netmonitor/internal/proc"
     "github.com/lonelysadness/netmonitor/pkg/utils"
     "golang.org/x/sys/unix"
 )
@@ -41,7 +43,7 @@ func Callback(payload *nfqueue.Payload) int {
     case 6:
         srcIP, dstIP, protocol = handleIPv6(packet)
     default:
-        fmt.Println("Unknown IP version")
+        logger.Log.Println("Unknown IP version")
         payload.SetVerdict(nfqueue.NF_ACCEPT)
         return 0
     }
@@ -56,6 +58,7 @@ func Callback(payload *nfqueue.Payload) int {
         headerLength = 40
     }
 
+    var icmpType, icmpCode int
     switch protocol {
     case unix.IPPROTO_TCP:
         if len(packet) >= headerLength+20 {
@@ -71,11 +74,11 @@ func Callback(payload *nfqueue.Payload) int {
         }
     case unix.IPPROTO_ICMP:
         if len(packet) >= headerLength+4 {
-            handleICMP(packet, headerLength)
+            icmpType, icmpCode = handleICMP(packet, headerLength)
         }
     case unix.IPPROTO_ICMPV6:
         if len(packet) >= headerLength+4 {
-            handleICMPv6(packet, headerLength)
+            icmpType, icmpCode = handleICMPv6(packet, headerLength)
         }
     }
 
@@ -101,22 +104,28 @@ func Callback(payload *nfqueue.Payload) int {
         fmt.Printf(", PID: %d, Process: %s", pid, processName)
     }
 
+    // Print ICMP type and code if applicable
+    if protocol == unix.IPPROTO_ICMP || protocol == unix.IPPROTO_ICMPV6 {
+        fmt.Printf(", ICMP Type: %d, ICMP Code: %d", icmpType, icmpCode)
+    }
+
     fmt.Println()
+
+    // Set verdict without printing
     payload.SetVerdict(nfqueue.NF_ACCEPT)
     return 0
 }
 
-func handleICMP(packet []byte, headerLength int) {
+func handleICMP(packet []byte, headerLength int) (int, int) {
     icmpHeader := packet[headerLength : headerLength+4]
-    icmpType := icmpHeader[0]
-    icmpCode := icmpHeader[1]
-    fmt.Printf("ICMP Type: %d, ICMP Code: %d", icmpType, icmpCode)
+    icmpType := int(icmpHeader[0])
+    icmpCode := int(icmpHeader[1])
+    return icmpType, icmpCode
 }
 
-func handleICMPv6(packet []byte, headerLength int) {
+func handleICMPv6(packet []byte, headerLength int) (int, int) {
     icmpHeader := packet[headerLength : headerLength+4]
-    icmpType := icmpHeader[0]
-    icmpCode := icmpHeader[1]
-    fmt.Printf("ICMPv6 Type: %d, ICMPv6 Code: %d", icmpType, icmpCode)
+    icmpType := int(icmpHeader[0])
+    icmpCode := int(icmpHeader[1])
+    return icmpType, icmpCode
 }
-
