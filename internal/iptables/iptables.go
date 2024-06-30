@@ -6,6 +6,9 @@ import (
 	"os/exec"
 )
 
+const iptablesCmd = "iptables"
+const ip6tablesCmd = "ip6tables"
+
 func runCommand(command string, args ...string) error {
 	cmd := exec.Command(command, args...)
 	cmd.Stdout = os.Stdout
@@ -39,10 +42,10 @@ func Setup() error {
 		{"-I", "OUTPUT", "-j", "NFQUEUE", "--queue-num", "0"},
 	}
 
-	if err := setupCommands("iptables", ipv4Commands); err != nil {
+	if err := setupCommands(iptablesCmd, ipv4Commands); err != nil {
 		return err
 	}
-	if err := setupCommands("ip6tables", ipv6Commands); err != nil {
+	if err := setupCommands(ip6tablesCmd, ipv6Commands); err != nil {
 		return err
 	}
 
@@ -60,10 +63,10 @@ func Cleanup() {
 		{"-t", "mangle", "-F"}, {"-t", "mangle", "-X"},
 	}
 
-	if err := setupCommands("iptables", ipv4Commands); err != nil {
+	if err := setupCommands(iptablesCmd, ipv4Commands); err != nil {
 		fmt.Printf("failed to run iptables cleanup command %v\n", err)
 	}
-	if err := setupCommands("ip6tables", ipv6Commands); err != nil {
+	if err := setupCommands(ip6tablesCmd, ipv6Commands); err != nil {
 		fmt.Printf("failed to run ip6tables cleanup command %v\n", err)
 	}
 }

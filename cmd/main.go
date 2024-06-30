@@ -8,16 +8,16 @@ import (
 	"os/signal"
 	"syscall"
 
-  "github.com/lonelysadness/netmonitor/internal/geoip"
+	"github.com/lonelysadness/netmonitor/internal/geoip"
 	"github.com/lonelysadness/netmonitor/internal/iptables"
 	"github.com/lonelysadness/netmonitor/internal/nfqueue"
 )
 
 func main() {
-  if err := geoip.Init("data/GeoLite2-Country.mmdb"); err != nil {
-    log.Fatalf("Error initializing GeoIP database %w", err)
-  }
-  defer geoip.Close()
+	if err := geoip.Init("data/GeoLite2-Country.mmdb"); err != nil {
+		log.Fatalf("Error initializing GeoIP database: %v", err)
+	}
+	defer geoip.Close()
 
 	if err := iptables.Setup(); err != nil {
 		log.Fatalf("Error setting up iptables: %v", err)
@@ -30,7 +30,6 @@ func main() {
 	}
 	defer q.Close()
 
-	// Setting up signal handling to gracefully exit
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
