@@ -25,11 +25,16 @@ func main() {
     }
     defer iptables.Cleanup()
 
-    q, err := nfqueue.NewQueue(0, false, nfqueue.Callback)
+    qv4, err := nfqueue.NewQueue(17040, false, nfqueue.Callback)
     if err != nil {
-        log.Fatalf("Error initializing nfqueue: %v", err)
+        log.Fatalf("Error initializing nfqueue v4: %v", err)
     }
-    defer q.Destroy()
+    defer qv4.Destroy()
+    qv6, err := nfqueue.NewQueue(17060, false, nfqueue.Callback)
+    if err != nil {
+        log.Fatalf("Error initializing nfqueue v6: %v", err)
+    }
+    defer qv6.Destroy()
 
     ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
     defer stop()
@@ -37,11 +42,13 @@ func main() {
     go func() {
         <-ctx.Done()
         fmt.Println("Shutting down...")
-        q.Destroy()
+        qv4.Destroy()
+        qv6.Destroy()
         iptables.Cleanup()
         os.Exit(0)
     }()
 
-    q.Run(ctx)
+    qv4.Run(ctx)
+    qv6.Run(ctx)
 }
 

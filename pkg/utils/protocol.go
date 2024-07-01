@@ -2,6 +2,11 @@ package utils
 
 import "golang.org/x/sys/unix"
 
+const (
+	ProtocolICMP  = 1
+	ProtocolICMPv6 = 58
+)
+
 // GetProtocolName returns the name of the protocol given its number.
 func GetProtocolName(protocol uint8) string {
 	switch protocol {
