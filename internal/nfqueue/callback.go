@@ -13,7 +13,6 @@ import (
     "golang.org/x/sys/unix"
 )
 
-
 func handleIPv4(packet []byte) (net.IP, net.IP, uint8) {
     ipHeader := packet[:20]
     srcIP := net.IP(ipHeader[12:16])
@@ -30,11 +29,29 @@ func handleIPv6(packet []byte) (net.IP, net.IP, uint8) {
     return srcIP, dstIP, protocol
 }
 
+func parsePorts(packet []byte, protocol uint8, headerLength int) (uint16, uint16) {
+    var srcPort, dstPort uint16
+    switch protocol {
+    case unix.IPPROTO_TCP:
+        if len(packet) >= headerLength+20 {
+            tcpHeader := packet[headerLength : headerLength+20]
+            srcPort = binary.BigEndian.Uint16(tcpHeader[0:2])
+            dstPort = binary.BigEndian.Uint16(tcpHeader[2:4])
+        }
+    case unix.IPPROTO_UDP:
+        if len(packet) >= headerLength+8 {
+            udpHeader := packet[headerLength : headerLength+8]
+            srcPort = binary.BigEndian.Uint16(udpHeader[0:2])
+            dstPort = binary.BigEndian.Uint16(udpHeader[2:4])
+        }
+    }
+    return srcPort, dstPort
+}
+
 func Callback(pkt Packet) int {
     packet := pkt.Data
     var srcIP, dstIP net.IP
     var protocol uint8
-    var srcPort, dstPort uint16
 
     switch packet[0] >> 4 {
     case 4:
@@ -61,20 +78,8 @@ func Callback(pkt Packet) int {
         headerLength = 40
     }
 
-    switch protocol {
-    case unix.IPPROTO_TCP:
-        if len(packet) >= headerLength+20 {
-            tcpHeader := packet[headerLength : headerLength+20]
-            srcPort = binary.BigEndian.Uint16(tcpHeader[0:2])
-            dstPort = binary.BigEndian.Uint16(tcpHeader[2:4])
-        }
-    case unix.IPPROTO_UDP:
-        if len(packet) >= headerLength+8 {
-            udpHeader := packet[headerLength : headerLength+8]
-            srcPort = binary.BigEndian.Uint16(udpHeader[0:2])
-            dstPort = binary.BigEndian.Uint16(udpHeader[2:4])
-        }
-    }
+    srcPort, dstPort := parsePorts(packet, protocol, headerLength)
+
     output := fmt.Sprintf("%s:%d", srcIP, srcPort)
     if srcCountry != "" {
         output += fmt.Sprintf(" (%s)", srcCountry)

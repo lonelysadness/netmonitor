@@ -8,18 +8,21 @@ import (
 )
 
 var (
-    v4chains = []string{
+    v4chains, v4rules, v4once = iptablesConfigIPv4()
+    v6chains, v6rules, v6once = iptablesConfigIPv6()
+)
+
+func iptablesConfigIPv4() ([]string, []string, []string) {
+    chains := []string{
         "mangle NETMONITOR-INGEST-OUTPUT",
         "mangle NETMONITOR-INGEST-INPUT",
         "filter NETMONITOR-FILTER",
     }
-    v4rules = []string{
+    rules := []string{
         "mangle NETMONITOR-INGEST-OUTPUT -j CONNMARK --restore-mark",
         "mangle NETMONITOR-INGEST-OUTPUT -m mark --mark 0 -j NFQUEUE --queue-num 17040 --queue-bypass",
-
         "mangle NETMONITOR-INGEST-INPUT -j CONNMARK --restore-mark",
         "mangle NETMONITOR-INGEST-INPUT -m mark --mark 0 -j NFQUEUE --queue-num 17140 --queue-bypass",
-
         "filter NETMONITOR-FILTER -m mark --mark 0 -j DROP",
         "filter NETMONITOR-FILTER -m mark --mark 1700 -j RETURN",
         "filter NETMONITOR-FILTER -m mark --mark 1701 -p icmp -j RETURN",
@@ -32,26 +35,26 @@ var (
         "filter NETMONITOR-FILTER -m mark --mark 1712 -j DROP",
         "filter NETMONITOR-FILTER -m mark --mark 1717 -j RETURN",
     }
-
-    v4once = []string{
+    once := []string{
         "mangle OUTPUT -j NETMONITOR-INGEST-OUTPUT",
         "mangle INPUT -j NETMONITOR-INGEST-INPUT",
         "filter OUTPUT -j NETMONITOR-FILTER",
         "filter INPUT -j NETMONITOR-FILTER",
     }
+    return chains, rules, once
+}
 
-    v6chains = []string{
+func iptablesConfigIPv6() ([]string, []string, []string) {
+    chains := []string{
         "mangle NETMONITOR-INGEST-OUTPUT",
         "mangle NETMONITOR-INGEST-INPUT",
         "filter NETMONITOR-FILTER",
     }
-    v6rules = []string{
+    rules := []string{
         "mangle NETMONITOR-INGEST-OUTPUT -j CONNMARK --restore-mark",
         "mangle NETMONITOR-INGEST-OUTPUT -m mark --mark 0 -j NFQUEUE --queue-num 17060 --queue-bypass",
-
         "mangle NETMONITOR-INGEST-INPUT -j CONNMARK --restore-mark",
         "mangle NETMONITOR-INGEST-INPUT -m mark --mark 0 -j NFQUEUE --queue-num 17160 --queue-bypass",
-
         "filter NETMONITOR-FILTER -m mark --mark 0 -j DROP",
         "filter NETMONITOR-FILTER -m mark --mark 1700 -j RETURN",
         "filter NETMONITOR-FILTER -m mark --mark 1701 -p icmpv6 -j RETURN",
@@ -64,14 +67,14 @@ var (
         "filter NETMONITOR-FILTER -m mark --mark 1712 -j DROP",
         "filter NETMONITOR-FILTER -m mark --mark 1717 -j RETURN",
     }
-
-    v6once = []string{
+    once := []string{
         "mangle OUTPUT -j NETMONITOR-INGEST-OUTPUT",
         "mangle INPUT -j NETMONITOR-INGEST-INPUT",
         "filter OUTPUT -j NETMONITOR-FILTER",
         "filter INPUT -j NETMONITOR-FILTER",
     }
-)
+    return chains, rules, once
+}
 
 func activateIPTables(protocol iptables.Protocol, chains, rules, once []string) error {
     ipt, err := iptables.NewWithProtocol(protocol)

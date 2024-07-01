@@ -20,5 +20,8 @@ func init() {
 
     // Redirect the standard logger output to the custom logger
     log.SetOutput(Log.Writer())
+
+    // Ensure to flush log buffers on exit
+    defer logFile.Close()
 }
 

@@ -10,26 +10,9 @@ import (
 
 // ParseProcNetFile parses the given /proc/net file to find the PID based on IP, port, and protocol
 func ParseProcNetFile(ip string, port uint16, protocol int) (int, string, error) {
-    var file string
-    isIPv6 := strings.Contains(ip, ":")
-    if isIPv6 {
-        switch protocol {
-        case 6: // TCP
-            file = "/proc/net/tcp6"
-        case 17: // UDP
-            file = "/proc/net/udp6"
-        default:
-            return 0, "", fmt.Errorf("unsupported protocol: %d", protocol)
-        }
-    } else {
-        switch protocol {
-        case 6: // TCP
-            file = "/proc/net/tcp"
-        case 17: // UDP
-            file = "/proc/net/udp"
-        default:
-            return 0, "", fmt.Errorf("unsupported protocol: %d", protocol)
-        }
+    file, err := getProcNetFile(ip, protocol)
+    if err != nil {
+        return 0, "", err
     }
 
     content, err := ioutil.ReadFile(file)
@@ -44,26 +27,13 @@ func ParseProcNetFile(ip string, port uint16, protocol int) (int, string, error)
             continue
         }
 
-        localAddress := fields[1]
-        parts := strings.Split(localAddress, ":")
-        if len(parts) != 2 {
+        ipParsed, portParsed, err := parseProcNetFields(fields[1], ip, port)
+        if err != nil {
             continue
         }
 
-        ipHex := parts[0]
-        portHex := parts[1]
-
-        var ipParsed string
-        if isIPv6 {
-            ipParsed = parseHexIPv6(ipHex)
-        } else {
-            ipParsed = parseHexIP(ipHex)
-        }
-        portParsed, _ := strconv.ParseUint(portHex, 16, 16)
-
         if ipParsed == ip && uint16(portParsed) == port {
-            inode := fields[9]
-            pid, processName, err := findPidByInode(inode)
+            pid, processName, err := findPidByInode(fields[9])
             if err != nil {
                 return 0, "", err
             }
@@ -72,6 +42,49 @@ func ParseProcNetFile(ip string, port uint16, protocol int) (int, string, error)
     }
 
     return 0, "", fmt.Errorf("no matching PID found for %s:%d/%d", ip, port, protocol)
+}
+
+func getProcNetFile(ip string, protocol int) (string, error) {
+    isIPv6 := strings.Contains(ip, ":")
+    if isIPv6 {
+        switch protocol {
+        case 6: // TCP
+            return "/proc/net/tcp6", nil
+        case 17: // UDP
+            return "/proc/net/udp6", nil
+        default:
+            return "", fmt.Errorf("unsupported protocol: %d", protocol)
+        }
+    } else {
+        switch protocol {
+        case 6: // TCP
+            return "/proc/net/tcp", nil
+        case 17: // UDP
+            return "/proc/net/udp", nil
+        default:
+            return "", fmt.Errorf("unsupported protocol: %d", protocol)
+        }
+    }
+}
+
+func parseProcNetFields(localAddress, ip string, port uint16) (string, uint64, error) {
+    parts := strings.Split(localAddress, ":")
+    if len(parts) != 2 {
+        return "", 0, fmt.Errorf("invalid address format")
+    }
+
+    var ipParsed string
+    if strings.Contains(ip, ":") {
+        ipParsed = parseHexIPv6(parts[0])
+    } else {
+        ipParsed = parseHexIP(parts[0])
+    }
+    portParsed, err := strconv.ParseUint(parts[1], 16, 16)
+    if err != nil {
+        return "", 0, err
+    }
+
+    return ipParsed, portParsed, nil
 }
 
 // parseHexIP converts a hexadecimal IPv4 string to a dotted decimal string

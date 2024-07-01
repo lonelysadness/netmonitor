@@ -11,29 +11,28 @@ import (
     "github.com/lonelysadness/netmonitor/internal/geoip"
     "github.com/lonelysadness/netmonitor/internal/iptables"
     "github.com/lonelysadness/netmonitor/internal/nfqueue"
-    _ "github.com/lonelysadness/netmonitor/internal/logger" // import logger to initialize it
+    _ "github.com/lonelysadness/netmonitor/internal/logger"
 )
 
 func main() {
-    if err := geoip.Init("data/GeoLite2-Country.mmdb"); err != nil {
-        log.Fatalf("Error initializing GeoIP database: %v", err)
+    mustInit := func(err error, msg string) {
+        if err != nil {
+            log.Fatalf("%s: %v", msg, err)
+        }
     }
+
+    mustInit(geoip.Init("data/GeoLite2-Country.mmdb"), "Error initializing GeoIP database")
     defer geoip.Close()
 
-    if err := iptables.Setup(); err != nil {
-        log.Fatalf("Error setting up iptables: %v", err)
-    }
+    mustInit(iptables.Setup(), "Error setting up iptables")
     defer iptables.Cleanup()
 
     qv4, err := nfqueue.NewQueue(17040, false, nfqueue.Callback)
-    if err != nil {
-        log.Fatalf("Error initializing nfqueue v4: %v", err)
-    }
+    mustInit(err, "Error initializing nfqueue v4")
     defer qv4.Destroy()
+
     qv6, err := nfqueue.NewQueue(17060, false, nfqueue.Callback)
-    if err != nil {
-        log.Fatalf("Error initializing nfqueue v6: %v", err)
-    }
+    mustInit(err, "Error initializing nfqueue v6")
     defer qv6.Destroy()
 
     ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
