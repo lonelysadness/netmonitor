@@ -23,7 +23,8 @@ var (
 		"mangle NETMONITOR-INGEST-INPUT -j CONNMARK --restore-mark",
 		"mangle NETMONITOR-INGEST-INPUT -m mark --mark 0 -j NFQUEUE --queue-num 1 --queue-bypass",
 
-		"filter NETMONITOR-FILTER -m mark --mark 0 -j ACCEPT",
+		// Change the following rule to DROP instead of ACCEPT
+		"filter NETMONITOR-FILTER -m mark --mark 0 -j DROP",
 		"filter NETMONITOR-FILTER -m mark --mark 1700 -j RETURN",
 		"filter NETMONITOR-FILTER -m mark --mark 1701 -p icmp -j RETURN",
 		"filter NETMONITOR-FILTER -m mark --mark 1701 -j REJECT --reject-with icmp-admin-prohibited",
@@ -55,7 +56,8 @@ var (
 		"mangle NETMONITOR-INGEST-INPUT -j CONNMARK --restore-mark",
 		"mangle NETMONITOR-INGEST-INPUT -m mark --mark 0 -j NFQUEUE --queue-num 1 --queue-bypass",
 
-		"filter NETMONITOR-FILTER -m mark --mark 0 -j ACCEPT",
+		// Change the following rule to DROP instead of ACCEPT
+		"filter NETMONITOR-FILTER -m mark --mark 0 -j DROP",
 		"filter NETMONITOR-FILTER -m mark --mark 1700 -j RETURN",
 		"filter NETMONITOR-FILTER -m mark --mark 1701 -p icmpv6 -j RETURN",
 		"filter NETMONITOR-FILTER -m mark --mark 1701 -j REJECT --reject-with icmp6-adm-prohibited",
