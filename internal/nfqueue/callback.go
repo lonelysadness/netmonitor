@@ -81,27 +81,27 @@ func Callback(pkt Packet) int {
 		}
 	}
 
-	output := fmt.Sprintf("Source IP: %s:%d", srcIP, srcPort)
-	if srcCountry != "" {
-		output += fmt.Sprintf(" (%s)", srcCountry)
-	}
+	output := fmt.Sprintf("%s:%d", srcIP, srcPort)
+if srcCountry != "" {
+    output += fmt.Sprintf(" (%s)", srcCountry)
+}
 
-	output += fmt.Sprintf(", Destination IP: %s:%d", dstIP, dstPort)
-	if dstCountry != "" {
-		output += fmt.Sprintf(" (%s)", dstCountry)
-	}
+output += fmt.Sprintf(" -> %s:%d", dstIP, dstPort)
+if dstCountry != "" {
+    output += fmt.Sprintf(" (%s)", dstCountry)
+}
 
-	output += fmt.Sprintf(", Protocol: %s", utils.GetProtocolName(protocol))
+output += fmt.Sprintf(" | %s", utils.GetProtocolName(protocol))
 
-	if pid, processName, err := proc.ParseProcNetFile(srcIP.String(), srcPort, int(protocol)); err == nil {
-		output += fmt.Sprintf(", PID: %d, Process: %s", pid, processName)
-	}
+if pid, processName, err := proc.ParseProcNetFile(srcIP.String(), srcPort, int(protocol)); err == nil {
+    output += fmt.Sprintf(", PID: %d, Process: %s", pid, processName)
+}
 
-	if protocol == unix.IPPROTO_ICMP || protocol == unix.IPPROTO_ICMPV6 {
-		output += fmt.Sprintf(", ICMP Type: %d, ICMP Code: %d", icmpType, icmpCode)
-	}
+if protocol == unix.IPPROTO_ICMP || protocol == unix.IPPROTO_ICMPV6 {
+    output += fmt.Sprintf(", ICMP Type: %d, ICMP Code: %d", icmpType, icmpCode)
+}
 
-	fmt.Println(output)
+fmt.Println(output)
 
 	pkt.queue.getNfq().SetVerdict(pkt.pktID, nfqueue.NfAccept)
 	return 0
