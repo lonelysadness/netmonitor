@@ -42,7 +42,7 @@ func NewQueue(qid uint16, v6 bool, callback func(Packet) int) (*Queue, error) {
         id:                   qid,
         afFamily:             uint8(afFamily),
         restart:              make(chan struct{}, 1),
-        packets:              make(chan Packet, 1000),
+        packets:              make(chan Packet, 5000),
         cancelSocketCallback: cancel,
         verdictCompleted:     make(chan struct{}, 1),
     }
@@ -62,8 +62,8 @@ func (q *Queue) open(ctx context.Context, callback func(Packet) int) error {
         MaxQueueLen:  0xffff,
         AfFamily:     q.afFamily,
         Copymode:     nfqueue.NfQnlCopyPacket,
-        ReadTimeout:  1000 * time.Millisecond,
-        WriteTimeout: 1000 * time.Millisecond,
+        ReadTimeout:  2000 * time.Millisecond,
+        WriteTimeout: 2000 * time.Millisecond,
     }
 
     nf, err := nfqueue.Open(cfg)
@@ -100,7 +100,16 @@ func (q *Queue) packetHandler(ctx context.Context, callback func(Packet) int) fu
         case <-ctx.Done():
             return 0
         case <-time.After(time.Second):
-            log.Printf("nfqueue: failed to queue packet")
+            log.Printf("nfqueue: failed to queue packet, slowing down intake")
+            time.Sleep(10 * time.Millisecond) // Introduce a small delay
+            select {
+            case q.packets <- pkt:
+                go callback(pkt)
+            case <-ctx.Done():
+                return 0
+            case <-time.After(time.Second):
+                log.Printf("nfqueue: failed to queue packet again, dropping")
+            }
         }
 
         return 0
