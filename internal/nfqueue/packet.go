@@ -8,6 +8,7 @@ import (
 
 	"github.com/florianl/go-nfqueue"
 	"github.com/tevino/abool"
+  "golang.org/x/sys/unix"
 	"github.com/lonelysadness/netmonitor/internal/logger"
 )
 
@@ -76,7 +77,7 @@ func (pkt *Packet) Accept() error {
 }
 
 func (pkt *Packet) Block() error {
-	if pkt.Protocol == ProtocolICMP {
+	if pkt.Protocol == unix.IPPROTO_ICMP{
 		return pkt.mark(MarkDrop)
 	}
 	return pkt.mark(MarkBlock)
@@ -94,7 +95,7 @@ func (pkt *Packet) PermanentAccept() error {
 }
 
 func (pkt *Packet) PermanentBlock() error {
-	if pkt.Protocol == ProtocolICMP || pkt.Protocol == ProtocolICMPv6 {
+	if pkt.Protocol == unix.IPPROTO_ICMP || pkt.Protocol == unix.IPPROTO_ICMPV6{
 		return pkt.mark(MarkDropAlways)
 	}
 	return pkt.mark(MarkBlockAlways)
