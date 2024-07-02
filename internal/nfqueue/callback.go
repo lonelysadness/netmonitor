@@ -48,6 +48,13 @@ func parsePorts(packet []byte, protocol uint8, headerLength int) (uint16, uint16
     return srcPort, dstPort
 }
 
+func isLocalIP(ip net.IP) bool {
+    if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsPrivate() {
+        return true
+    }
+    return false
+}
+
 func Callback(pkt Packet) int {
     packet := pkt.Data
     var srcIP, dstIP net.IP
@@ -68,8 +75,15 @@ func Callback(pkt Packet) int {
     pkt.DstIP = dstIP
     pkt.Protocol = protocol
 
-    srcCountry := geoip.LookupCountry(srcIP)
-    dstCountry := geoip.LookupCountry(dstIP)
+    var remoteIP net.IP
+    if isLocalIP(srcIP) {
+        remoteIP = dstIP
+    } else {
+        remoteIP = srcIP
+    }
+
+    country := geoip.LookupCountry(remoteIP)
+    org, asn, _ := geoip.LookupASN(remoteIP)
 
     headerLength := 0
     if (packet[0] >> 4) == 4 {
@@ -81,17 +95,25 @@ func Callback(pkt Packet) int {
     srcPort, dstPort := parsePorts(packet, protocol, headerLength)
 
     output := fmt.Sprintf("%s:%d", srcIP, srcPort)
-    if srcCountry != "" {
-        output += fmt.Sprintf(" (%s)", srcCountry)
+    if country != "" {
+        output += fmt.Sprintf(" (%s)", country)
     }
 
     output += fmt.Sprintf(" -> %s:%d", dstIP, dstPort)
-    if dstCountry != "" {
-        output += fmt.Sprintf(" (%s)", dstCountry)
+    if country != "" {
+        output += fmt.Sprintf(" (%s)", country)
     }
 
     output += fmt.Sprintf(" | %s", utils.GetProtocolName(protocol))
-    
+
+    if org != "" {
+        output += fmt.Sprintf(", Org: %s", org)
+    }
+
+    if asn != 0 {
+        output += fmt.Sprintf(", ASN: %d", asn)
+    }
+
     if pid, processName, err := proc.ParseProcNetFile(srcIP.String(), srcPort, int(protocol)); err == nil {
         output += fmt.Sprintf(", PID: %d, Process: %s", pid, processName)
     }
@@ -99,7 +121,7 @@ func Callback(pkt Packet) int {
     fmt.Println(output)
 
     // Use the mark function to set packet marks
-    pkt.mark(MarkAcceptAlways) 
+    pkt.mark(MarkAcceptAlways)
 
     return 0
 }

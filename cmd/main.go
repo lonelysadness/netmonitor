@@ -22,7 +22,7 @@ func main() {
 
     logger.Log.Println("Starting netmonitor...")
 
-    mustInit(geoip.Init("data/GeoLite2-Country.mmdb"), "Error initializing GeoIP database")
+    mustInit(geoip.Init("data/GeoLite2-Country.mmdb", "data/GeoLite2-ASN.mmdb"), "Error initializing GeoIP database")
     defer geoip.Close()
 
     mustInit(iptables.Setup(), "Error setting up iptables")
