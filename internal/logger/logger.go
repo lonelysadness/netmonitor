@@ -5,23 +5,14 @@ import (
     "os"
 )
 
-var (
-    // Log is the main logger for the application
-    Log *log.Logger
-)
+var Log *log.Logger
 
 func init() {
-    logFile, err := os.OpenFile("netmonitor.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+    file, err := os.OpenFile("netmonitor.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
     if err != nil {
-        log.Fatalf("Failed to open log file: %v", err)
+        log.Fatalln("Failed to open log file:", err)
     }
 
-    Log = log.New(logFile, "", log.Ldate|log.Ltime|log.Lshortfile)
-
-    // Redirect the standard logger output to the custom logger
-    log.SetOutput(Log.Writer())
-
-    // Ensure to flush log buffers on exit
-    defer logFile.Close()
+    Log = log.New(file, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 

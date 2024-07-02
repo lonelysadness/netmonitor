@@ -3,7 +3,6 @@ package main
 import (
     "context"
     "fmt"
-    "log"
     "os"
     "os/signal"
     "syscall"
@@ -11,15 +10,17 @@ import (
     "github.com/lonelysadness/netmonitor/internal/geoip"
     "github.com/lonelysadness/netmonitor/internal/iptables"
     "github.com/lonelysadness/netmonitor/internal/nfqueue"
-    _ "github.com/lonelysadness/netmonitor/internal/logger"
+    "github.com/lonelysadness/netmonitor/internal/logger"
 )
 
 func main() {
     mustInit := func(err error, msg string) {
         if err != nil {
-            log.Fatalf("%s: %v", msg, err)
+            logger.Log.Fatalf("%s: %v", msg, err)
         }
     }
+
+    logger.Log.Println("Starting netmonitor...")
 
     mustInit(geoip.Init("data/GeoLite2-Country.mmdb"), "Error initializing GeoIP database")
     defer geoip.Close()
