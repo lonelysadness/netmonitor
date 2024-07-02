@@ -65,8 +65,6 @@ func (pkt *Packet) setMark(mark int) error {
                 markToString(mark), pkt.ID(), pkt.SrcIP, pkt.DstIP, err)
             return err
         }
-        logger.Log.Printf("Packet %s (%s -> %s) marked with %s",
-            pkt.ID(), pkt.SrcIP, pkt.DstIP, markToString(mark))
         break
     }
     return nil

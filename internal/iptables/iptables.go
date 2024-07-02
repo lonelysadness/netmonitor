@@ -3,6 +3,7 @@ package iptables
 import (
     "strings"
 
+    "github.com/lonelysadness/netmonitor/internal/logger"
     "github.com/coreos/go-iptables/iptables"
     "github.com/hashicorp/go-multierror"
 )
@@ -22,7 +23,7 @@ func iptablesConfigIPv4() ([]string, []string, []string) {
         "mangle NETMONITOR-INGEST-OUTPUT -j CONNMARK --restore-mark",
         "mangle NETMONITOR-INGEST-OUTPUT -m mark --mark 0 -j NFQUEUE --queue-num 17040 --queue-bypass",
         "mangle NETMONITOR-INGEST-INPUT -j CONNMARK --restore-mark",
-        "mangle NETMONITOR-INGEST-INPUT -m mark --mark 0 -j NFQUEUE --queue-num 17140 --queue-bypass",
+        "mangle NETMONITOR-INGEST-INPUT -m mark --mark 0 -j NFQUEUE --queue-num 17040 --queue-bypass",
         "filter NETMONITOR-FILTER -m mark --mark 0 -j DROP",
         "filter NETMONITOR-FILTER -m mark --mark 1700 -j RETURN",
         "filter NETMONITOR-FILTER -m mark --mark 1701 -p icmp -j RETURN",
@@ -54,7 +55,7 @@ func iptablesConfigIPv6() ([]string, []string, []string) {
         "mangle NETMONITOR-INGEST-OUTPUT -j CONNMARK --restore-mark",
         "mangle NETMONITOR-INGEST-OUTPUT -m mark --mark 0 -j NFQUEUE --queue-num 17060 --queue-bypass",
         "mangle NETMONITOR-INGEST-INPUT -j CONNMARK --restore-mark",
-        "mangle NETMONITOR-INGEST-INPUT -m mark --mark 0 -j NFQUEUE --queue-num 17160 --queue-bypass",
+        "mangle NETMONITOR-INGEST-INPUT -m mark --mark 0 -j NFQUEUE --queue-num 17060 --queue-bypass",
         "filter NETMONITOR-FILTER -m mark --mark 0 -j DROP",
         "filter NETMONITOR-FILTER -m mark --mark 1700 -j RETURN",
         "filter NETMONITOR-FILTER -m mark --mark 1701 -p icmpv6 -j RETURN",
@@ -94,6 +95,7 @@ func activateIPTables(protocol iptables.Protocol, chains, rules, once []string) 
     for _, rule := range rules {
         parts := strings.Split(rule, " ")
         if err = ipt.Append(parts[0], parts[1], parts[2:]...); err != nil {
+            logger.Log.Printf("Error appending rule: %s, %v", rule, err)
             return err
         }
     }
@@ -107,6 +109,7 @@ func activateIPTables(protocol iptables.Protocol, chains, rules, once []string) 
         }
         if !exists {
             if err = ipt.Insert(parts[0], parts[1], 1, parts[2:]...); err != nil {
+                logger.Log.Printf("Error inserting once-only rule: %s, %v", rule, err)
                 return err
             }
         }

@@ -2,11 +2,11 @@ package nfqueue
 
 import (
     "context"
-    "log"
     "strings"
     "sync/atomic"
     "time"
 
+    "github.com/lonelysadness/netmonitor/internal/logger"
     "github.com/florianl/go-nfqueue"
     "github.com/tevino/abool"
     "golang.org/x/sys/unix"
@@ -92,7 +92,7 @@ func (q *Queue) packetHandler(ctx context.Context, callback func(Packet) int) fu
         case <-ctx.Done():
             return 0
         case <-time.After(time.Second):
-            log.Printf("nfqueue: failed to queue packet, slowing down intake")
+            logger.Log.Printf("nfqueue: failed to queue packet, slowing down intake")
             time.Sleep(10 * time.Millisecond)
             select {
             case q.packets <- pkt:
@@ -100,7 +100,7 @@ func (q *Queue) packetHandler(ctx context.Context, callback func(Packet) int) fu
             case <-ctx.Done():
                 return 0
             case <-time.After(time.Second):
-                log.Printf("nfqueue: failed to queue packet again, dropping")
+                logger.Log.Printf("nfqueue: failed to queue packet again, dropping")
             }
         }
 
@@ -119,7 +119,7 @@ func (q *Queue) handleError(e error) int {
     }
 
     if !strings.HasSuffix(e.Error(), "use of closed file") {
-        log.Printf("nfqueue: encountered error while receiving packets: %s\n", e.Error())
+        logger.Log.Printf("nfqueue: encountered error while receiving packets: %s\n", e.Error())
     }
 
     if nf := q.getNfq(); nf != nil {
@@ -145,10 +145,10 @@ func (q *Queue) monitor(ctx context.Context, callback func(Packet) int) {
                 if err == nil {
                     break
                 }
-                log.Printf("Failed to open nfqueue: %s", err)
+                logger.Log.Printf("Failed to open nfqueue: %s", err)
                 time.Sleep(100 * time.Millisecond)
             }
-            log.Println("Reopened nfqueue")
+            logger.Log.Println("Reopened nfqueue")
         }
     }
 }
@@ -162,7 +162,7 @@ func (q *Queue) Destroy() {
     q.cancelSocketCallback()
     if nf := q.getNfq(); nf != nil {
         if err := nf.Close(); err != nil {
-            log.Printf("nfqueue: failed to close queue %d: %s", q.id, err)
+            logger.Log.Printf("nfqueue: failed to close queue %d: %s", q.id, err)
         }
     }
 }
