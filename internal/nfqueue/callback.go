@@ -5,7 +5,6 @@ import (
     "fmt"
     "net"
 
-    "github.com/florianl/go-nfqueue"
     "github.com/lonelysadness/netmonitor/internal/geoip"
     "github.com/lonelysadness/netmonitor/internal/logger"
     "github.com/lonelysadness/netmonitor/internal/proc"
@@ -67,7 +66,6 @@ func Callback(pkt Packet) int {
         srcIP, dstIP, protocol = handleIPv6(packet)
     default:
         logger.Log.Println("Unknown IP version")
-        pkt.queue.getNfq().SetVerdict(pkt.pktID, nfqueue.NfAccept)
         return 0
     }
 
