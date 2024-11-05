@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
 	"sync/atomic"
 
 	"github.com/florianl/go-nfqueue"
@@ -11,6 +12,37 @@ import (
 	"github.com/tevino/abool"
 	"golang.org/x/sys/unix"
 )
+
+// Add packet pool to reduce allocations
+var packetPool = sync.Pool{
+	New: func() interface{} {
+		return &Packet{
+			verdictPending: abool.New(),
+			verdictSet:     make(chan struct{}),
+		}
+	},
+}
+
+func getPacket() *Packet {
+	return packetPool.Get().(*Packet)
+}
+
+func putPacket(p *Packet) {
+	p.reset()
+	packetPool.Put(p)
+}
+
+func (pkt *Packet) reset() {
+	pkt.Data = pkt.Data[:0]
+	pkt.SrcIP = nil
+	pkt.DstIP = nil
+	pkt.Protocol = 0
+	pkt.verdictPending.UnSet()
+	select {
+	case <-pkt.verdictSet:
+	default:
+	}
+}
 
 type Packet struct {
 	Base

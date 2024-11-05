@@ -6,6 +6,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 )
 
 // ParseProcNetFile parses the given /proc/net file to find the PID based on IP, port, and protocol
@@ -107,6 +109,11 @@ func parseHexIPv6(hex string) string {
 
 // findPidByInode finds the PID and process name associated with a given inode by scanning /proc
 func findPidByInode(inode string) (int, string, error) {
+	// Check process cache first
+	if info, exists := processCache.get(inode); exists {
+		return info.PID, info.Name, nil
+	}
+
 	entries, err := os.ReadDir("/proc")
 	if err != nil {
 		return 0, "", err
@@ -140,12 +147,53 @@ func findPidByInode(inode string) (int, string, error) {
 
 				processName := strings.TrimSpace(string(comm))
 				pidInt, _ := strconv.Atoi(pid)
+
+				// Update process cache
+				processCache.Lock()
+				processCache.processes[inode] = &ProcessInfo{
+					PID:       pidInt,
+					Name:      processName,
+					UpdatedAt: time.Now(),
+				}
+				processCache.Unlock()
+
 				return pidInt, processName, nil
 			}
 		}
 	}
 
 	return 0, "", fmt.Errorf("no PID found for inode: %s", inode)
+}
+
+// Add process cache
+type ProcessCache struct {
+	sync.RWMutex
+	processes map[string]*ProcessInfo
+	expiry    time.Time
+}
+
+type ProcessInfo struct {
+	PID       int
+	Name      string
+	UpdatedAt time.Time
+}
+
+var (
+	processCache = &ProcessCache{
+		processes: make(map[string]*ProcessInfo),
+	}
+)
+
+func (pc *ProcessCache) get(inode string) (*ProcessInfo, bool) {
+	pc.RLock()
+	defer pc.RUnlock()
+
+	if pc.expiry.Before(time.Now()) {
+		return nil, false
+	}
+
+	info, exists := pc.processes[inode]
+	return info, exists
 }
 
 // ConnectionIdentifier provides methods to identify process information for network connections

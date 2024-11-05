@@ -1,6 +1,7 @@
 package nfqueue
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"net"
@@ -19,14 +20,21 @@ import (
 // ConnectionCache stores connection verdicts for faster processing
 type ConnectionCache struct {
 	sync.RWMutex
-	verdicts map[string]int
-	expiry   map[string]time.Time
+	verdicts    map[string]*CacheEntry
+	cleanupDone chan struct{}
+}
+
+type CacheEntry struct {
+	verdict     int
+	expiry      time.Time
+	lastPackets uint64
+	byteCount   uint64
 }
 
 var (
 	connCache = &ConnectionCache{
-		verdicts: make(map[string]int),
-		expiry:   make(map[string]time.Time),
+		verdicts:    make(map[string]*CacheEntry),
+		cleanupDone: make(chan struct{}),
 	}
 	cacheDuration  = 5 * time.Minute
 	connIdentifier *proc.ConnectionIdentifier
@@ -40,6 +48,33 @@ func init() {
 	}
 }
 
+// Add periodic cleanup
+func (c *ConnectionCache) startCleanup(ctx context.Context) {
+	ticker := time.NewTicker(1 * time.Minute)
+	go func() {
+		defer close(c.cleanupDone)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				c.cleanup()
+			}
+		}
+	}()
+}
+
+func (c *ConnectionCache) cleanup() {
+	c.Lock()
+	defer c.Unlock()
+	now := time.Now()
+	for key, entry := range c.verdicts {
+		if now.After(entry.expiry) {
+			delete(c.verdicts, key)
+		}
+	}
+}
+
 // getConnectionKey generates a unique key for a connection
 func getConnectionKey(srcIP net.IP, srcPort uint16, dstIP net.IP, dstPort uint16, protocol uint8) string {
 	return fmt.Sprintf("%s:%d->%s:%d:%d", srcIP, srcPort, dstIP, dstPort, protocol)
@@ -50,13 +85,12 @@ func (c *ConnectionCache) getCachedVerdict(key string) (int, bool) {
 	c.RLock()
 	defer c.RUnlock()
 
-	if expiry, exists := c.expiry[key]; exists {
-		if time.Now().Before(expiry) {
-			return c.verdicts[key], true
+	if entry, exists := c.verdicts[key]; exists {
+		if time.Now().Before(entry.expiry) {
+			return entry.verdict, true
 		}
 		// Clean up expired entry
 		delete(c.verdicts, key)
-		delete(c.expiry, key)
 	}
 	return 0, false
 }
@@ -66,8 +100,10 @@ func (c *ConnectionCache) setCachedVerdict(key string, verdict int) {
 	c.Lock()
 	defer c.Unlock()
 
-	c.verdicts[key] = verdict
-	c.expiry[key] = time.Now().Add(cacheDuration)
+	c.verdicts[key] = &CacheEntry{
+		verdict: verdict,
+		expiry:  time.Now().Add(cacheDuration),
+	}
 }
 
 // handleIPv4 extracts IPv4 packet information

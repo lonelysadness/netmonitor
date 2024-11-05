@@ -3,6 +3,7 @@ package nfqueue
 import (
 	"context"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -21,6 +22,15 @@ type Queue struct {
 	restart              chan struct{}
 	pendingVerdicts      uint64
 	verdictCompleted     chan struct{}
+	stats                *QueueStats
+	bufferPool           *sync.Pool
+}
+
+type QueueStats struct {
+	sync.Mutex
+	PacketsProcessed uint64
+	PacketsDropped   uint64
+	ProcessingTime   time.Duration
 }
 
 func NewQueue(qid uint16, v6 bool, callback func(Packet) int) (*Queue, error) {
@@ -37,6 +47,12 @@ func NewQueue(qid uint16, v6 bool, callback func(Packet) int) (*Queue, error) {
 		packets:              make(chan Packet, 5000),
 		cancelSocketCallback: cancel,
 		verdictCompleted:     make(chan struct{}, 1),
+		stats:                &QueueStats{},
+		bufferPool: &sync.Pool{
+			New: func() interface{} {
+				return make([]byte, 65535)
+			},
+		},
 	}
 
 	if err := q.open(ctx, callback); err != nil {
@@ -76,6 +92,14 @@ func (q *Queue) open(ctx context.Context, callback func(Packet) int) error {
 
 func (q *Queue) packetHandler(ctx context.Context, callback func(Packet) int) func(nfqueue.Attribute) int {
 	return func(attrs nfqueue.Attribute) int {
+		start := time.Now()
+		defer func() {
+			q.stats.Lock()
+			q.stats.ProcessingTime += time.Since(start)
+			q.stats.PacketsProcessed++
+			q.stats.Unlock()
+		}()
+
 		if attrs.PacketID == nil {
 			return 0
 		}

@@ -10,23 +10,20 @@ const (
 	MarkRerouteNS    = 1799
 )
 
+// Use a more efficient mark lookup
+var markDescriptions = map[int]string{
+	MarkAccept:       "Accept",
+	MarkBlock:        "Block",
+	MarkDrop:         "Drop",
+	MarkAcceptAlways: "AcceptAlways",
+	MarkBlockAlways:  "BlockAlways",
+	MarkDropAlways:   "DropAlways",
+	MarkRerouteNS:    "RerouteNS",
+}
+
 func markToString(mark int) string {
-	switch mark {
-	case MarkAccept:
-		return "Accept"
-	case MarkBlock:
-		return "Block"
-	case MarkDrop:
-		return "Drop"
-	case MarkAcceptAlways:
-		return "AcceptAlways"
-	case MarkBlockAlways:
-		return "BlockAlways"
-	case MarkDropAlways:
-		return "DropAlways"
-	case MarkRerouteNS:
-		return "RerouteNS"
+	if desc, ok := markDescriptions[mark]; ok {
+		return desc
 	}
 	return "unknown"
 }
-
