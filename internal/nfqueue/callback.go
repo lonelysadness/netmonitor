@@ -119,7 +119,7 @@ func Callback(pkt Packet) int {
 		srcIP, dstIP, protocol = handleIPv6(packet)
 		headerLength = 40
 	default:
-		logger.Log.Printf("Unknown IP version for packet ID: %d", pkt.ID())
+		logger.Log.Printf("Unknown IP version for packet ID: %s", pkt.ID())
 		return nfqueue.NfAccept
 	}
 

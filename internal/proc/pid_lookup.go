@@ -27,7 +27,7 @@ func ParseProcNetFile(ip string, port uint16, protocol int) (int, string, error)
 			continue
 		}
 
-		ipParsed, portParsed, err := parseProcNetFields(fields[1], ip, port)
+		ipParsed, portParsed, err := parseProcNetFields(fields[1], ip)
 		if err != nil {
 			continue
 		}
@@ -67,7 +67,7 @@ func getProcNetFile(ip string, protocol int) (string, error) {
 	}
 }
 
-func parseProcNetFields(localAddress, ip string, port uint16) (string, uint64, error) {
+func parseProcNetFields(localAddress, ip string) (string, uint64, error) {
 	parts := strings.Split(localAddress, ":")
 	if len(parts) != 2 {
 		return "", 0, fmt.Errorf("invalid address format")
