@@ -24,8 +24,13 @@ func main() {
 	mustInit(geoip.Init("data/GeoLite2-Country.mmdb", "data/GeoLite2-ASN.mmdb"), "Error initializing GeoIP database")
 	defer geoip.Close()
 
-	mustInit(iptables.Setup(), "Error setting up iptables")
-	defer iptables.Cleanup()
+	// Initialize IPTables
+	ipt, err := iptables.New()
+	mustInit(err, "Error initializing iptables")
+
+	// Setup IPTables rules
+	mustInit(ipt.Setup(), "Error setting up iptables")
+	defer ipt.Cleanup()
 
 	qv4, err := nfqueue.NewQueue(17040, false, nfqueue.Callback)
 	mustInit(err, "Error initializing nfqueue v4")
@@ -43,7 +48,7 @@ func main() {
 		logger.Log.Println("Shutting down...")
 		qv4.Destroy()
 		qv6.Destroy()
-		iptables.Cleanup()
+		ipt.Cleanup() // Use the instance method instead of package function
 		os.Exit(0)
 	}()
 
