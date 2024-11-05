@@ -2,6 +2,7 @@ package proc
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -145,4 +146,35 @@ func findPidByInode(inode string) (int, string, error) {
 	}
 
 	return 0, "", fmt.Errorf("no PID found for inode: %s", inode)
+}
+
+// ConnectionIdentifier provides methods to identify process information for network connections
+type ConnectionIdentifier struct{}
+
+// ConnectionDetails contains information about a network connection
+type ConnectionDetails struct {
+	PID         int
+	ProcessName string
+}
+
+// NewConnectionIdentifier creates a new ConnectionIdentifier
+func NewConnectionIdentifier() (*ConnectionIdentifier, error) {
+	return &ConnectionIdentifier{}, nil
+}
+
+// IdentifyConnection looks up the process information for a given connection
+func (ci *ConnectionIdentifier) IdentifyConnection(srcIP net.IP, srcPort uint16, dstIP net.IP, dstPort uint16, protocol uint8) (*ConnectionDetails, error) {
+	// Convert protocol number to int
+	protocolInt := int(protocol)
+
+	// Use the existing ParseProcNetFile function
+	pid, processName, err := ParseProcNetFile(srcIP.String(), srcPort, protocolInt)
+	if err != nil {
+		return &ConnectionDetails{}, err
+	}
+
+	return &ConnectionDetails{
+		PID:         pid,
+		ProcessName: processName,
+	}, nil
 }

@@ -1,6 +1,6 @@
 module github.com/lonelysadness/netmonitor
 
-go 1.23
+go 1.22.0
 
 require (
 	github.com/coreos/go-iptables v0.7.0
