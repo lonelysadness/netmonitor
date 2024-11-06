@@ -23,10 +23,6 @@ var packetPool = sync.Pool{
 	},
 }
 
-func getPacket() *Packet {
-	return packetPool.Get().(*Packet)
-}
-
 func putPacket(p *Packet) {
 	p.reset()
 	packetPool.Put(p)
@@ -105,11 +101,12 @@ func (pkt *Packet) setMark(mark int) error {
 
 func (pkt *Packet) Accept() error {
 	logger.Log.Printf("Accepting packet ID: %d", pkt.pktID)
+	defer putPacket(pkt) // Ensure packet is put back to the pool
 	return pkt.mark(MarkAccept)
 }
-
 func (pkt *Packet) Block() error {
 	logger.Log.Printf("Blocking packet ID: %d", pkt.pktID)
+	defer putPacket(pkt) // Ensure packet is put back to the pool
 	if pkt.Protocol == unix.IPPROTO_ICMP {
 		return pkt.mark(MarkDrop)
 	}

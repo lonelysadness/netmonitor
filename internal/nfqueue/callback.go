@@ -24,11 +24,15 @@ type ConnectionCache struct {
 	cleanupDone chan struct{}
 }
 
+func init() {
+	// Start the cleanup process
+	ctx := context.Background()
+	go connCache.startCleanup(ctx)
+}
+
 type CacheEntry struct {
-	verdict     int
-	expiry      time.Time
-	lastPackets uint64
-	byteCount   uint64
+	verdict int
+	expiry  time.Time
 }
 
 var (

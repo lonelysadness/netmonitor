@@ -6,10 +6,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/lonelysadness/netmonitor/internal/geoip"
-	"github.com/lonelysadness/netmonitor/internal/iptables"
-	"github.com/lonelysadness/netmonitor/internal/logger"
-	"github.com/lonelysadness/netmonitor/internal/nfqueue"
+	"netmonitor/internal/geoip"
+	"netmonitor/internal/iptables"
+	"netmonitor/internal/logger"
+	"netmonitor/internal/nfqueue"
 )
 
 func main() {
